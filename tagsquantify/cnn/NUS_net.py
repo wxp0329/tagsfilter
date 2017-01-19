@@ -17,17 +17,20 @@ from tagsquantify.cnn import NUS_input
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 128,
+tf.app.flags.DEFINE_integer('batch_size', 8,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('img_label_file', '/home/wxp/NSU_dataset/256_img_label_file.dat',
+tf.app.flags.DEFINE_string('img_label_file', '/home/wxp/NSU_dataset/img_index.dat',
                            """Path to the NUS data directory.""")
-tf.app.flags.DEFINE_string('img_label_pair', '/home/wxp/NSU_dataset/256_pairs_labels.dat',
+tf.app.flags.DEFINE_string('replaced_file', '/home/wxp/NSU_dataset/replaced_All_tags.dat',
+                           """Path to the NUS data directory.""")
+tf.app.flags.DEFINE_string('img_label_pair', '',
                            """Path to the NUS data directory.""")
 tf.app.flags.DEFINE_boolean('use_fp16', False,
                             """Train the model using fp16.""")
 
 # Global constants describing the NUS data set.
 LOSS_LAMBDA = 1
+JACCARD_INDEX = 0.6
 IMAGE_SIZE = NUS_input.IMAGE_SIZE
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = NUS_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = NUS_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
@@ -204,6 +207,29 @@ def inference(images):
     return local4  # local4 :[FLAGS.batch_size,192]
 
 
+def read_tag_replaced(filename):
+    """读取被替换好的每个图片的标签集
+    :return 格式：[{img:labels}]"""
+
+    all_line = []
+    with open(filename) as fr:
+
+        for line in fr.readlines():
+
+            img_tags = line.strip().split('__#__')
+
+            tags = []
+            if len(img_tags) < 2:
+                all_line.append(['###'])
+                continue
+            for tag in img_tags[1].split(' '):
+                tags.append(tag)
+
+            all_line.append(tags)
+
+    return all_line
+
+
 # 文件格式：lable1 label2 flag
 def read_labels():
     all_pair_labels = []
@@ -214,16 +240,89 @@ def read_labels():
     return all_pair_labels
 
 
+# 读取被同义词替换好的标签集
+replaced_all_tags = read_tag_replaced(FLAGS.replaced_file)
+
+
 # 判断label_pair 属于那个类
-def which_room(labels, i, j):
+def which_room(labels_i, labels_j):
     print('which_room')
+
+    img_labels_i = set(replaced_all_tags[int(labels_i)])
+    img_labels_j = set(replaced_all_tags[int(labels_j)])
+
+    intersection = len(img_labels_i.intersection(img_labels_j))
+    union = len(img_labels_i.union(img_labels_j))
+
+    jaccard = intersection * 1.0 / union
+    if jaccard < JACCARD_INDEX:
+        return 0
+    else:
+        return 1
+
+
+# 判断label_pair 属于那个类
+def which_room1(labels, i, j):
+    print('which_room11111111111')
     pair_label = {labels[i], labels[j]}
     for i in read_labels():
         if len(pair_label.intersection(set(i))) == 2:
             return i[2]  # 1 or 0
 
 
+one_labels = []
+zero_labels = []
+
+
+def one_func(x):
+    one_labels.append(x)
+    return np.array(one_labels)
+
+
+def zero_func(x):
+    zero_labels.append(x)
+    return np.array(zero_labels)
+
+
 def loss(imgs, labels):
+    """Add L2Loss to all the trainable variables.
+
+      Add summary for "Loss" and "Loss/avg".
+      Args:
+        imgs: imgs from inference().
+        labels: Labels from distorted_inputs or inputs(). 1-D tensor
+                of shape [batch_size]
+
+      Returns:
+        Loss tensor of type float.
+      """
+    # Calculate the average cross entropy loss across the batch.
+    print('computer losss........................')
+    labels_size = int(str(labels.get_shape()).strip('()')[:-1])
+
+    for i in xrange(labels_size - 1):
+        for j in xrange(i + 1, labels_size):
+            pair_sub = tf.sub(imgs[i], imgs[j])
+            pair_square = tf.square(pair_sub)
+            pair_sum = tf.reduce_sum(pair_square)
+
+            wr = tf.py_func(which_room, [labels[i], labels[j]], tf.int64)
+            bb= tf.cond(tf.equal(wr, 0), lambda: tf.py_func(zero_func, [pair_sum], tf.float32),
+                    lambda: tf.py_func(one_func, [pair_sum], tf.float32))
+
+    loss_my = tf.reduce_sum(one_labels) + tf.reduce_sum(
+        tf.cond(0 > 1 - tf.reduce_sum(zero_labels), lambda: tf.constant(0, dtype='float32'),
+                lambda: tf.subtract(tf.constant(1, dtype='float32'), tf.reduce_sum(zero_labels))))
+    print('loss_my: ', loss_my)
+
+    tf.add_to_collection('losses', loss_my)
+
+    # The total loss is defined as the cross entropy loss plus all of the weight
+    # decay terms (L2 loss).
+    return tf.add_n(tf.get_collection('losses'), name='total_loss')
+
+
+def loss1(imgs, labels):
     """Add L2Loss to all the trainable variables.
 
     Add summary for "Loss" and "Loss/avg".
@@ -254,21 +353,19 @@ def loss(imgs, labels):
     #                                        lambda:tf.constant(0, dtype=tf.float32), lambda:tf.constant(LOSS_LAMBDA, dtype=tf.float32) - pair_sum))
     for i in xrange(labels_size - 1):
         for j in xrange(i + 1, labels_size):
-            pair_sub = tf.sub(imgs[i], imgs[j])
-            pair_square = tf.square(pair_sub)
-            pair_sum = tf.reduce_sum(pair_square)
-            if which_room(labels, i, j):
-                print ('fang ru 1 ...........',len(one_labels))
+            pair_sub = np.subtract(imgs[i], imgs[j])
+            pair_square = np.square(pair_sub)
+            pair_sum = np.sum(pair_square)
+            if which_room1(labels, i, j):
                 one_labels.append(pair_sum)
             else:
-                print('fang ru 0 ...........',len(zero_labels))
-                # max_sum = np.maximum(tf.constant(0, dtype=tf.float32) , tf.constant(LOSS_LAMBDA, dtype=tf.float32) - pair_sum)
-                zero_labels.append(tf.cond(tf.greater(tf.constant(0, dtype=tf.float32) , tf.constant(LOSS_LAMBDA, dtype=tf.float32) - pair_sum),
-                                           lambda:tf.constant(0, dtype=tf.float32), lambda:tf.constant(LOSS_LAMBDA, dtype=tf.float32) - pair_sum))
+                zero_labels.append(pair_sum)
 
-    loss_my = tf.add(tf.reduce_sum(ops.convert_to_tensor(one_labels)), tf.reduce_sum(ops.convert_to_tensor(zero_labels)))
-
-    print('loss_my: ',loss_my)
+    # loss_my = tf.reduce_sum(one_labels) + tf.reduce_sum(np.maximum(0, 1 - np.array(zero_labels)))
+    loss_my = tf.reduce_sum(one_labels) + tf.reduce_sum(
+        tf.cond(0 > 1 - tf.reduce_sum(zero_labels), lambda: tf.constant(0, dtype='float32'),
+                lambda: tf.subtract(tf.constant(1, dtype='float32'), tf.reduce_sum(zero_labels))))
+    print('loss_my: ', loss_my)
 
     tf.add_to_collection('losses', loss_my)
 
@@ -341,13 +438,13 @@ def train(total_loss, global_step):
     apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
 
     # Add histograms for trainable variables.
-    for var in tf.trainable_variables():
-        tf.summary.scalar(var.op.name, var)
+    # for var in tf.trainable_variables():
+    #     tf.summary.scalar(var.op.name, var)
 
     # Add histograms for gradients.
-    # for grad, var in grads:
-    #     if grad is not None:
-    #         tf.contrib.deprecated.histogram_summary(var.op.name + '/gradients', grad)
+    for grad, var in grads:
+        if grad is not None:
+            tf.contrib.deprecated.histogram_summary(var.op.name + '/gradients', grad)
 
     # Track the moving averages of all trainable variables.
     variable_averages = tf.train.ExponentialMovingAverage(

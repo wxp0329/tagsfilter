@@ -9,10 +9,10 @@ from tensorflow.python.framework import ops
 from tensorflow.python.framework import dtypes
 import os
 
-IMAGE_SIZE = 240
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 250000
+IMAGE_SIZE = 100
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 10000
-IMG_ROOT_DIR = '/home/wxp/NSU_dataset/256_images'
+IMG_ROOT_DIR = '/home/wxp/NSU_dataset/images'
 
 
 def read_labeled_image_list(image_list_file):
@@ -26,10 +26,24 @@ def read_labeled_image_list(image_list_file):
     -------
        List with all filenames in file image_list_file
     """
+    # 图片数据少于标签集中已记录的个数，加上这个操作过滤掉图片集中没有的路径，防止读取图片出错
+    file_paths = []
+    for root, dirs, files in os.walk(IMG_ROOT_DIR):  # 图片集文件夹中的所有存在的图片路径
+        for file in files:
+            file_paths.append(file)
+
+    exist_pic_path = set()  # 真实存在的图片的路径（因为有些图片没有下载到！！！）
     f = open(image_list_file, 'r')
+    for i in f.readlines():
+        pic_name = i.strip().split(' ')[0]
+        if pic_name in file_paths:
+            exist_pic_path.add(i)
+
+    print('总共参与训练的图片数为：', len(exist_pic_path), len(file_paths))
+    f.close()
     filenames = []
     labels = []
-    for line in f:
+    for line in exist_pic_path:
         filename, label = line.strip().split(' ')
         filenames.append(os.path.join(IMG_ROOT_DIR, filename))
         labels.append(label)
@@ -48,7 +62,7 @@ def read_images_from_disk(input_queue):
     label = input_queue[1]
 
     file_contents = tf.read_file(input_queue[0])
-    example = tf.image.decode_png(file_contents,3)
+    example = tf.image.decode_jpeg(file_contents, 3)
     # example = rescale_image(example)
     # processed_label = label
     return example, label
@@ -88,10 +102,9 @@ def inputs(eval_data, img_label_file, batch_size):
             # Reads pfathes of images together with there labels
 
     images = ops.convert_to_tensor(image_list, dtype=dtypes.string)
-    labels = ops.convert_to_tensor(label_list, dtype=dtypes.string)
-
+    # labels = ops.convert_to_tensor(label_list, dtype=dtypes.string)
     # Makes an input queue
-    input_queue = tf.train.slice_input_producer([images, labels],
+    input_queue = tf.train.slice_input_producer([images, label_list],
                                                 num_epochs=num_examples_per_epoch,
                                                 shuffle=True)
 
@@ -99,7 +112,7 @@ def inputs(eval_data, img_label_file, batch_size):
     image, label = read_images_from_disk(input_queue)
 
     reshaped_image = tf.cast(image, tf.float32)
-
+    # reshaped_label = tf.cast(label, tf.int32)
     height = IMAGE_SIZE
     width = IMAGE_SIZE
 
