@@ -9,10 +9,10 @@ from tensorflow.python.framework import ops
 from tensorflow.python.framework import dtypes
 import os
 
-IMAGE_SIZE = 100
+IMAGE_SIZE = 60
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 10000
-IMG_ROOT_DIR = '/home/wxp/NSU_dataset/images'
+IMG_ROOT_DIR = '/media/wangxiaopeng/maxdisk/NUS_dataset/10000_images'
 
 
 def read_labeled_image_list(image_list_file):
@@ -60,10 +60,11 @@ def read_images_from_disk(input_queue):
       Two tensors: the decoded image, and the string label.
     """
     label = input_queue[1]
+    with tf.name_scope ('read_pics_labels') as scope:
 
-    file_contents = tf.read_file(input_queue[0])
-    example = tf.image.decode_jpeg(file_contents, 3)
-    # example = rescale_image(example)
+        file_contents = tf.read_file(input_queue[0])
+        example = tf.image.decode_jpeg(file_contents, 3 )
+        # example = rescale_image(example)
     # processed_label = label
     return example, label
 
@@ -80,59 +81,58 @@ def inputs(eval_data, img_label_file, batch_size):
       images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
       labels: Labels. 1D tensor of [batch_size] size.
     """
-    image_list, label_list = read_labeled_image_list(img_label_file)
+    with tf.name_scope('batch_input') as scope:
+        image_list, label_list = read_labeled_image_list(img_label_file)
 
-    if not eval_data:
+        if not eval_data:
 
-        num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
-    else:
+            num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
+        else:
 
-        num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
+            num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
-    for f in image_list:
-        if not tf.gfile.Exists(os.path.join(IMG_ROOT_DIR, f)):
-            raise ValueError('Failed to find file: ' + f)
+        for f in image_list:
+            if not tf.gfile.Exists(os.path.join(IMG_ROOT_DIR, f)):
+                raise ValueError('Failed to find file: ' + f)
 
-            # Create a queue that produces the filenames to read.
-            # filename_queue = tf.train.string_input_producer(filenames)
+                # Create a queue that produces the filenames to read.
+                # filename_queue = tf.train.string_input_producer(filenames)
 
-            # Read examples from files in the filename queue.
-            # reader = tf.WholeFileReader()
-            # key, value = reader.read(filename_queue)
-            # Reads pfathes of images together with there labels
+                # Read examples from files in the filename queue.
+                # reader = tf.WholeFileReader()
+                # key, value = reader.read(filename_queue)
+                # Reads pfathes of images together with there labels
 
-    images = ops.convert_to_tensor(image_list, dtype=dtypes.string)
-    # labels = ops.convert_to_tensor(label_list, dtype=dtypes.string)
-    # Makes an input queue
-    input_queue = tf.train.slice_input_producer([images, label_list],
-                                                num_epochs=num_examples_per_epoch,
-                                                shuffle=True)
+        images = ops.convert_to_tensor(image_list, dtype=dtypes.string)
+        # labels = ops.convert_to_tensor(label_list, dtype=dtypes.string)
+        # Makes an input queue
+        input_queue = tf.train.slice_input_producer([images, label_list],
+                                                    num_epochs=num_examples_per_epoch,
+                                                    shuffle=True)
 
-    # Reads the actual images from
-    image, label = read_images_from_disk(input_queue)
+        # Reads the actual images from
+        image, label = read_images_from_disk(input_queue)
 
-    reshaped_image = tf.cast(image, tf.float32)
-    # reshaped_label = tf.cast(label, tf.int32)
-    height = IMAGE_SIZE
-    width = IMAGE_SIZE
+        reshaped_image = tf.cast(image, tf.float32)
+        # reshaped_label = tf.cast(label, tf.int32)
 
-    # Image processing for evaluation.
-    # Crop the central [height, width] of the image.
-    resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
-                                                           width, height)
+        # Image processing for evaluation.
+        # Crop the central [height, width] of the image.
+        # resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
+        #                                                        width, height)
+        resized_image =  tf.image.resize_images(reshaped_image, [IMAGE_SIZE, IMAGE_SIZE])
+        # Subtract off the mean and divide by the variance of the pixels.
+        float_image = tf.image.per_image_standardization(resized_image)
 
-    # Subtract off the mean and divide by the variance of the pixels.
-    float_image = tf.image.per_image_standardization(resized_image)
-
-    # Ensure that the random shuffling has good mixing properties.
-    min_fraction_of_examples_in_queue = 0.4
-    min_queue_examples = int(num_examples_per_epoch *
-                             min_fraction_of_examples_in_queue)
+        # Ensure that the random shuffling has good mixing properties.
+        min_fraction_of_examples_in_queue = 0.4
+        min_queue_examples = int(num_examples_per_epoch *
+                                 min_fraction_of_examples_in_queue)
 
     # Generate a batch of images and labels by building up a queue of examples.
-    return _generate_image_batch(float_image, label,
-                                 min_queue_examples, batch_size,
-                                 shuffle=False)
+        return _generate_image_batch(float_image, label,
+                                     min_queue_examples, batch_size,
+                                     shuffle=False)
 
 
 def _generate_image_batch(image, label, min_queue_examples,
@@ -167,6 +167,6 @@ def _generate_image_batch(image, label, min_queue_examples,
             capacity=min_queue_examples + 3 * batch_size)
 
     # Display the training images in the visualizer.
-    # tf.contrib.deprecated.image_summary('images', images)
+    tf.contrib.deprecated.image_summary('images', images)
 
     return images, tf.reshape(label_batch, [batch_size])

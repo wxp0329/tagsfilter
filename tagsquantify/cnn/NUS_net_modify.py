@@ -1,50 +1,26 @@
 # encoding=utf-8
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
-import gzip, pickle
-import os
 import re
-import sys
-import tarfile
-import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import ops
-import collections
-
-from tagsquantify.cnn import NUS_input
-
+import numpy as np
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 64,
+tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('img_label_file',
-                           '/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_img_index.dat',
-                           """Path to the NUS data directory.""")
 
-tf.app.flags.DEFINE_string('replaced_file',
-                           '/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/replaced_220341_tags.dat',
-                           """Path to the NUS data directory.""")
-tf.app.flags.DEFINE_string('img_label_pair', '',
-                           """Path to the NUS data directory.""")
 tf.app.flags.DEFINE_boolean('use_fp16', False,
                             """Train the model using fp16.""")
 
 # Global constants describing the NUS data set.
-LOSS_LAMBDA = 1
-JACCARD_INDEX = 0.3
-IMAGE_SIZE = NUS_input.IMAGE_SIZE
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = NUS_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = NUS_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
-
+LOSS_LAMBDA = 1.
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 220341 / FLAGS.batch_size
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-MOMENTUM = 0.5
-INITIAL_LEARNING_RATE = 0.1  # Initial learning rate.
+LEARNING_RATE_DECAY_FACTOR = 0.05  # Learning rate decay factor.
+MOMENTUM = 0.6
+INITIAL_LEARNING_RATE = 0.05  # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -67,9 +43,9 @@ def _activation_summary(x):
     #     # session. This helps the clarity of presentation on tensorboard.
     tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
 
-    tf.histogram_summary(tensor_name + '/activations', x)
+    tf.summary.histogram(tensor_name + '/activations', x)
 
-    tf.scalar_summary(tensor_name + '/sparsity',
+    tf.summary.scalar(tensor_name + '/sparsity',
                       tf.nn.zero_fraction(x))
 
 
@@ -110,34 +86,11 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
     var = _variable_on_cpu(
         name,
         shape,
-        tf.random_normal_initializer(stddev=stddev, dtype=dtype))
+        tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
     if wd is not None:
-        weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+        weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
         tf.add_to_collection('losses', weight_decay)
     return var
-
-
-def inputs(eval_data):
-    """Construct input for CIFAR evaluation using the Reader ops.
-
-    Args:
-      eval_data: bool, indicating if one should use the train or eval data set.
-
-    Returns:
-      images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
-      labels: Labels. 1D tensor of [batch_size] size.
-    Raises:
-      ValueError: If no data_dir
-    """
-    if not FLAGS.data_dir:
-        raise ValueError('Please supply a data_dir')
-    data_dir = FLAGS.img_label_file
-    images, labels = NUS_input.inputs(eval_data=eval_data,
-                                      img_label_file=data_dir,
-                                      batch_size=FLAGS.batch_size)
-    if FLAGS.use_fp16:
-        images = tf.cast(images, tf.float16)
-    return images, labels
 
 
 def inference(images, batch=FLAGS.batch_size):
@@ -210,27 +163,19 @@ def inference(images, batch=FLAGS.batch_size):
         local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
         _activation_summary(local4)
 
-    # softmax, i.e. softmax(WX + b)
-    # with tf.variable_scope('affine') as scope:
-    #     weights = _variable_with_weight_decay('weights', [192, 100],
-    #                                           stddev=1 / 192.0, wd=0.0)
-    #     biases = _variable_on_cpu('biases', [100],
-    #                               tf.constant_initializer(0.0))
-    #     affine = tf.nn.relu(tf.matmul(local4, weights) + biases, name=scope.name)
-    #     _activation_summary(affine)
-    #
-    # with tf.variable_scope('linear2') as scope:
-    #     weights = _variable_with_weight_decay('weights', [100, 100],
-    #                                           stddev=1 / 192.0, wd=0.0)
-    #     biases = _variable_on_cpu('biases', [100],
-    #                               tf.constant_initializer(0.0))
-    #     linear2 = tf.nn.relu(tf.matmul(linear1, weights) + biases, name=scope.name)
-    #     _activation_summary(linear2)
+    # # # # affine
+    with tf.variable_scope('affine') as scope:
+        weights = _variable_with_weight_decay('weights', [192, 100],
+                                              stddev=1 / 192.0, wd=0.0)
+        biases = _variable_on_cpu('biases', [100],
+                                  tf.constant_initializer(0.0))
+        affine = tf.nn.relu(tf.matmul(local4, weights) + biases, name=scope.name)
+        _activation_summary(affine)
 
-    return local4
+    return affine
 
 
-def loss_enforce(imgs):
+def loss(imgs):
     """
 
     :param true_files: 包含tensors的一维数组
@@ -239,132 +184,49 @@ def loss_enforce(imgs):
     """
     with tf.variable_scope('loss') as scope:
         print('computer losss........................')
-        true_ = tf.reduce_sum(tf.reduce_sum(tf.square(tf.slice(imgs, [0, 0], [FLAGS.batch_size, -1])), axis=1))
-        false_ = tf.reduce_sum(tf.maximum(0, tf.sub(LOSS_LAMBDA, tf.reduce_sum(
-            tf.square(tf.slice(imgs, [FLAGS.batch_size, 0], [-1, -1])), axis=1))))
+        # true_ = tf.reduce_sum(tf.reduce_sum(tf.square(tf.slice(imgs, [0, 0], [int(FLAGS.batch_size/2), -1])), axis=1))
+        # false_ = tf.reduce_sum(tf.maximum(0., tf.subtract(LOSS_LAMBDA, tf.reduce_sum(
+        #     tf.square(tf.slice(imgs, [int(FLAGS.batch_size/2), 0], [-1, -1])), axis=1))))
+        # imgs 向量的前二分之一是依次是true pairs，false pairs，mid pairs的左部分，其中true pairs占二分之一，false pairs，mid pairs各占四分之一
+        # 后二分之一依次是true pairs，false pairs，mid pairs的右部分，其中true pairs占二分之一，false pairs，mid pairs各占四分之一
+
+        true_false_mid_left = imgs[:int(FLAGS.batch_size / 2)]  # imgs向量的前二分之一
+        true_lefts = true_false_mid_left[:int(FLAGS.batch_size / 4)]  # imgs向量的前二分之一前二分之一
+        false_mid_lefts = true_false_mid_left[int(FLAGS.batch_size / 4):]  # imgs向量的前二分之一后二分之一
+
+        true_false_mid_right = imgs[int(FLAGS.batch_size / 2):]  # imgs向量的后二分之一
+        true_rights = true_false_mid_right[:int(FLAGS.batch_size / 4)]  # imgs向量的后二分之一的前二分之一
+        false_mid_right = true_false_mid_right[int(FLAGS.batch_size / 4):]  # imgs向量的后二分之一的后二分之一
+
+        true_ = tf.reduce_sum(tf.reduce_sum(tf.square(tf.subtract(true_lefts, true_rights)), axis=1))
+        false_ = tf.reduce_sum(tf.maximum(0., tf.subtract(LOSS_LAMBDA, tf.reduce_sum(
+            tf.square(tf.subtract(false_mid_lefts, false_mid_right)), axis=1))))
+
         loss = tf.add(true_, false_)
     tf.add_to_collection('losses', loss)
-
-        # The total loss is defined as the cross entropy loss plus all of the weight
-        # decay terms (L2 loss).
-    return tf.add_n(tf.get_collection('losses'), name='total_loss')
-
-
-def read_tag_replaced(filename):
-    """读取被替换好的每个图片的标签集
-    :return 格式：[{img:labels}]"""
-
-    all_line = []
-    with open(filename) as fr:
-
-        for line in fr.readlines():
-
-            img_tags = line.strip().split('__^__')
-
-            tags = []
-            if len(img_tags) < 2:
-                all_line.append(['###'])
-                continue
-            for tag in img_tags[1].split(' '):
-                tags.append(tag)
-
-            all_line.append(tags)
-
-    return all_line
-
-
-# 读取被同义词替换好的标签集
-replaced_all_tags = read_tag_replaced(FLAGS.replaced_file)
-
-
-# 判断label_pair 属于那个类
-def which_room(labels_i, labels_j):
-    print('which_room')
-
-    img_labels_i = set(replaced_all_tags[int(labels_i)])
-    img_labels_j = set(replaced_all_tags[int(labels_j)])
-
-    intersection = len(img_labels_i.intersection(img_labels_j))
-    union = len(img_labels_i.union(img_labels_j))
-
-    jaccard = intersection * 1.0 / union
-    if jaccard < JACCARD_INDEX:
-        return 0
-    else:
-        return 1
-
-
-def loss(imgs, labels):
-    """Add L2Loss to all the trainable variables.
-
-      Add summary for "Loss" and "Loss/avg".
-      Args:
-        imgs: imgs from inference().
-        labels: Labels from distorted_inputs or inputs(). 1-D tensor
-                of shape [batch_size]
-
-      Returns:
-        Loss tensor of type float.
-      """
-    # Calculate the average cross entropy loss across the batch.
-    with tf.variable_scope('loss') as scope:
-        print('computer losss........................')
-
-        pair_sub = tf.sub(imgs[0], imgs[1])
-        pair_square = tf.square(pair_sub)
-        pair_sum = tf.reduce_sum(pair_square)
-
-        wr = tf.py_func(which_room, [labels[0], labels[1]], tf.int64)
-
-        loss_my = tf.cond(tf.equal(wr, tf.constant(1, dtype=tf.int64)), lambda: pair_sum,
-                          lambda: tf.maximum(tf.constant(0, dtype='float32'),
-                                             tf.sub(tf.constant(1, dtype='float32'),
-                                                    pair_sum)))
-
-        print('loss_my: ', loss_my)
-
-    tf.add_to_collection('losses', loss_my)
 
     # The total loss is defined as the cross entropy loss plus all of the weight
     # decay terms (L2 loss).
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def loss_copy(imgs, labels):
-    """Add L2Loss to all the trainable variables.
+def loss1(imgs):
+    """
 
-      Add summary for "Loss" and "Loss/avg".
-      Args:
-        imgs: imgs from inference().
-        labels: Labels from distorted_inputs or inputs(). 1-D tensor
-                of shape [batch_size]
-
-      Returns:
-        Loss tensor of type float.
-      """
-    # Calculate the average cross entropy loss across the batch.
+    :param true_files: 包含tensors的一维数组
+    :param false_files: 包含tensors的一维数组
+    :return:
+    """
     with tf.variable_scope('loss') as scope:
         print('computer losss........................')
-        ones = tf.Variable(0., dtype=tf.float32)
-        zeros = tf.Variable(0., dtype=tf.float32)
-        for i in xrange(FLAGS.batch_size - 1):
-            for j in xrange(i + 1, FLAGS.batch_size):
-                pair_sub = tf.sub(imgs[i], imgs[j])
-                pair_square = tf.square(pair_sub)
-                pair_sum = tf.reduce_sum(pair_square)
-
-                wr = tf.py_func(which_room, [labels[i], labels[j]], tf.int64)
-
-                bb = tf.cond(tf.equal(wr, tf.constant(1, dtype=tf.int64)), lambda: tf.assign_add(ones, pair_sum),
-                             lambda: tf.assign_add(zeros,
-                                                   tf.maximum(tf.constant(0, dtype='float32'),
-                                                              tf.sub(tf.constant(1, dtype='float32'),
-                                                                     pair_sum))))
-
-        loss_my = tf.add(tf.reduce_sum(ones), tf.reduce_sum(zeros))
-        print('loss_my: ', loss_my)
-
-    tf.add_to_collection('losses', loss_my)
+        # true_ = tf.reduce_sum(tf.reduce_sum(tf.square(tf.slice(imgs, [0, 0], [int(FLAGS.batch_size/2), -1])), axis=1))
+        # false_ = tf.reduce_sum(tf.maximum(0., tf.subtract(LOSS_LAMBDA, tf.reduce_sum(
+        #     tf.square(tf.slice(imgs, [int(FLAGS.batch_size/2), 0], [-1, -1])), axis=1))))
+        true_ = tf.reduce_sum(tf.reduce_sum(tf.square(imgs[:int(FLAGS.batch_size / 2)]), axis=1))
+        false_ = tf.reduce_sum(tf.maximum(0., tf.subtract(LOSS_LAMBDA, tf.reduce_sum(
+            tf.square(imgs[int(FLAGS.batch_size / 2):]), axis=1))))
+        loss = tf.add(true_, false_)
+    tf.add_to_collection('losses', loss)
 
     # The total loss is defined as the cross entropy loss plus all of the weight
     # decay terms (L2 loss).
@@ -392,8 +254,8 @@ def _add_loss_summaries(total_loss):
     for l in losses + [total_loss]:
         # Name each loss as '(raw)' and name the moving average version of the loss
         # as the original loss name.
-        tf.scalar_summary(l.op.name + ' (raw)', l)
-        tf.scalar_summary(l.op.name, loss_averages.average(l))
+        tf.summary.histogram(l.op.name + ' (raw)', l)
+        tf.summary.scalar(l.op.name, loss_averages.average(l))
 
     return loss_averages_op
 
@@ -422,7 +284,7 @@ def train(total_loss, global_step):
                                     LEARNING_RATE_DECAY_FACTOR,
                                     staircase=True)
 
-    tf.scalar_summary('learning_rate', lr)
+    tf.summary.scalar('learning_rate', lr)
 
     # Generate moving averages of all losses and associated summaries.
     loss_averages_op = _add_loss_summaries(total_loss)
@@ -438,12 +300,12 @@ def train(total_loss, global_step):
 
     # Add histograms for trainable variables.
     for var in tf.trainable_variables():
-        tf.histogram_summary(var.op.name, var)
+        tf.summary.histogram(var.op.name, var)
 
     # Add histograms for gradients.
     for grad, var in grads:
         if grad is not None:
-            tf.histogram_summary(var.op.name + '/gradients', grad)
+            tf.summary.histogram(var.op.name + '/gradients', grad)
 
     # Track the moving averages of all trainable variables.
     variable_averages = tf.train.ExponentialMovingAverage(

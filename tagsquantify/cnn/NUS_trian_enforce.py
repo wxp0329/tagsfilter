@@ -1,21 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
+# encoding=utf-8
 from datetime import datetime
 import time, os
 import numpy as np
 import tensorflow as tf
 
-from tagsquantify.cnn import NUS_input
-from tagsquantify.cnn import NUS_net
+import NUS_input_enforce
+import NUS_net_enforce
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/NUS_train',
+tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/NUS_train_test',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 5000000,
+tf.app.flags.DEFINE_integer('max_steps', 100000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
@@ -27,28 +24,29 @@ def train():
         global_step = tf.Variable(0, trainable=False)
 
         # Get images and labels for CIFAR-10.
-        images, labels = NUS_input.inputs(False, NUS_net.FLAGS.img_label_file, NUS_net.FLAGS.batch_size)
-
+        # images = NUS_input_enforce.InputUtil('/home/wangxiaopeng/NUS_dataset/images').next_batch(64)
+        img_size = NUS_input_enforce.FLAGS.img_size
+        images = tf.placeholder(dtype=tf.float32, shape=[NUS_net_enforce.FLAGS.batch_size, img_size, img_size, 3])
         # Build a Graph that computes the logits predictions from the
         # inference model.
-        logits = NUS_net.inference(images,NUS_net.FLAGS.batch_size)
+        logits = NUS_net_enforce.inference(images, NUS_net_enforce.FLAGS.batch_size)
 
         # Calculate loss.
-        loss = NUS_net.loss(logits, labels)
+        loss = NUS_net_enforce.loss(logits)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        train_op = NUS_net.train(loss, global_step)
+        train_op = NUS_net_enforce.train(loss, global_step)
 
         # Create a saver.
         saver = tf.train.Saver(tf.all_variables())
 
         # Build the summary operation based on the TF collection of Summaries.
-        summary_op = tf.merge_all_summaries()
+        summary_op = tf.summary.merge_all()
 
         # Build an initialization operation to run below.
-        init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-        # init = tf.global_variables_initializer()
+        # init = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+        init = tf.global_variables_initializer()
 
         # Start running operations on the Graph.
         sess = tf.Session(config=tf.ConfigProto(
@@ -63,9 +61,13 @@ def train():
         #                                         graph_def=sess.get_default)
         summary_writer = tf.summary.FileWriter(FLAGS.train_dir, graph=g)
 
-        for step in range(FLAGS.max_steps):
+        input = NUS_input_enforce.InputUtil(NUS_input_enforce.FLAGS.imgs_dir)
+
+        for step in xrange(FLAGS.max_steps):
             start_time = time.time()
-            _, loss_value = sess.run([train_op, loss])
+            datas = input.next_batch(NUS_net_enforce.FLAGS.batch_size, step=step)
+            _, loss_value = sess.run([train_op, loss],
+                                     feed_dict={images: datas})
             duration = time.time() - start_time
 
             assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
@@ -81,7 +83,7 @@ def train():
                                     examples_per_sec, sec_per_batch))
 
             if step % 100 == 0:
-                summary_str = sess.run(summary_op)
+                summary_str = sess.run(summary_op,feed_dict={images: datas})
                 summary_writer.add_summary(summary_str, step)
 
             # Save the model checkpoint periodically.
@@ -91,7 +93,6 @@ def train():
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-    # cifar10.maybe_download_and_extract()
     if tf.gfile.Exists(FLAGS.train_dir):
         tf.gfile.DeleteRecursively(FLAGS.train_dir)
     tf.gfile.MakeDirs(FLAGS.train_dir)

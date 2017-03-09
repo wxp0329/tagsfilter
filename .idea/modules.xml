@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../numpyTest/.idea/numpyTest.iml" filepath="$PROJECT_DIR$/../numpyTest/.idea/numpyTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/tagsfilter.iml" filepath="$PROJECT_DIR$/.idea/tagsfilter.iml" />
     </modules>
   </component>

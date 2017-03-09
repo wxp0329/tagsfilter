@@ -23,7 +23,6 @@ class NUSDataTrain:
 
     # 判断label_pair 属于那个类
     def which_room(self, labels, i, j):
-        print('which_room')
         pair_labels = {labels[i], labels[j]}
         for i in self.pair_labels:
             if len(pair_labels.intersection(set(i))) == 2:
@@ -44,13 +43,17 @@ class NUSDataTrain:
                 pair_square = np.square(pair_sub)
                 pair_sum = np.sum(pair_square)
                 if self.which_room(y, i, j):
-
                     one_labels.append(pair_sum)
                 else:
+                    zero_labels.append(pair_sum)
 
-                    zero_labels.append(np.maximum(0, lamda - pair_sum))
+        loss_my = np.sum(one_labels) + np.sum(np.maximum(0, lamda - np.array(zero_labels)))
 
-        loss_my = np.sum(one_labels) + np.sum(zero_labels)
+
+
+        dx = np.zeros_like(x)
+
+
 
         return loss_my
 

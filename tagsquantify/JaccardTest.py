@@ -45,12 +45,12 @@ class JaccardTest:
         # all_dup_tags.shape {1=[t1, t2, t3], 2=[t3, t5, t6]}"""
         all_dup_tags = {}
         print '读取所有的标签中......'
-        with open(self.root_path + 'filter_All_tags_part1.dat') as all_tags:
+        with open(self.root_path + 'filter_All_tags.dat') as all_tags:
             for line in all_tags.readlines():
                 line_tags = []
 
                 tags = re.split('\\s+', line, 1)
-                if len(tags) < 1:
+                if len(tags) == 1:
                     all_dup_tags[tags[0]] = ['###']
                     continue
                 for tag in tags[1].strip().split(' '):
@@ -146,9 +146,17 @@ if __name__ == '__main__':
     j = JaccardTest('/home/wxp/NSU_dataset/')
     # j.synset_tag_dict()
     # print j.tag_replace([['1','2','3','4','5'],['12','2','32','4','5']],{'b':['f'],'a':['12','32','43','3','5']})
-    read_tag_replace = j.read_tag_replace('/home/wxp/NSU_dataset/replaced_All_tags.dat')
-    j.save_pairs_Jaccard(read_tag_replace)
+    # j.all_lines_tags()
     # left = 0
+    a = []
+    b= set()
+    with open('/home/wxp/NSU_dataset/img_index.dat') as fr:
+        for line in fr.readlines():
+            # if len(line.strip()) > 0:
+                b.add(line.split(' ')[0])
+                # a.append('1')
+
+    print len(b)
     # i = 0
     # while 1:
     #

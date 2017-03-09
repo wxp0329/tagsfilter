@@ -1,5 +1,5 @@
 # coding:utf-8
-import cPickle
+import cPickle,os
 import numpy as np
 from PIL import Image
 import layers
@@ -40,11 +40,9 @@ class CNNLayer(object):
         pool_param = {'pool_height': 2, 'pool_width': 2, 'stride': 2}
 
         # compute the forward pass
-        print 'compute the conv_relu_pool_forward forward pass'
         a1, cache1 = layers.conv_relu_pool_forward(X, W1, b1, conv_param, pool_param)
         norm_out, norm_cache = layers.spatial_batchnorm_forward(a1, 1, 0, bn_param={'mode': 'train'})
 
-        print 'compute the affine_relu_forward forward pass'
         a2, cache2 = layers.affine_relu_forward(norm_out, W2, b2)
         scores, cache3 = layers.affine_forward(a2, W3, b3)
 
@@ -52,15 +50,11 @@ class CNNLayer(object):
             return scores
 
         # compute the backward pass
-        print 'compute the NUS_loss backward pass'
         data_loss = NUS_loss_test.NUSDataTrain().loss(scores, y)
         dscores = NUS_loss_test.NUSDataTrain().eval_numerical_gradient(NUS_loss_test.NUSDataTrain().grad_loss, scores)  # layers.softmax_loss(scores, y)#改这里
         da2, dW3, db3 = layers.affine_backward(dscores, cache3)
-        print 'compute the affine_relu_backward backward pass'
         da1, dW2, db2 = layers.affine_relu_backward(da2, cache2)
-        print 'compute the spatial_batchnorm_backward backward pass'
         dnorm_out, dgamma, dbeta = layers.spatial_batchnorm_backward(da1, norm_cache)
-        print 'compute the conv_relu_pool_backward backward pass'
         dX, dW1, db1 = layers.conv_relu_pool_backward(dnorm_out, cache1)
 
         # Add regularization
@@ -75,7 +69,7 @@ class CNNLayer(object):
 
     def NUStrain(self, X, y, learning_rate=1e-3,
                  learning_rate_decay=0.95, reg=1e-5, mu=0.9, num_epochs=10,
-                 mu_increase=1.0, batch_size=200, verbose=False):
+                 mu_increase=1.0, batch_size=24, verbose=True):
         """
                 Train this neural network using stochastic gradient descent.
                 Inputs:
@@ -138,7 +132,6 @@ class CNNLayer(object):
             config_vb1['learning_rate'] = learning_rate
 
             # Perform parameter update (with momentum)
-            print ' Perform parameter update (with momentum)'
             v_W3, config_vW3 = optim.sgd_momentum(self.params['W3'], grads['W3'], config_vW3)
             self.params['W3'] = v_W3
             v_b3, config_vb3 = optim.sgd_momentum(self.params['b3'], grads['b3'], config_vb3)
@@ -159,14 +152,19 @@ class CNNLayer(object):
             print
             print 'epoch %d / %d: loss is %f' % (
                 epoch, num_epochs, loss)
+            with open(os.path.join(NUS_loss_test.NUSDataTrain().rootDir,'models/loss_history.dat'),'a') as fw:
+                fw.write('epoch %d / %d: loss is %f' % (
+                epoch, num_epochs, loss))
+                fw.write('\n')
+                fw.flush()
             # Every epoch, check decay learning rate.
             if verbose and it % iterations_per_epoch == 0:
                 # Decay learning rate
                 learning_rate *= learning_rate_decay
                 # Increase mu
                 mu *= mu_increase
-                print 'write model into /home/wxp/mytest.model file!!!!!!!!!!!!!'
-                with open('/home/wxp/' + it + '_mytest.model', 'w') as fw:
+                print 'write model into NUS_loss_test.NUSDataTrain().rootDir/models/?mytest.model file!!!!!!!!!!!!!'
+                with open(os.path.join(NUS_loss_test.NUSDataTrain().rootDir,'models/') + str(it) + '_mytest.model', 'w') as fw:
                     cPickle.dump(self.params, fw)
 
         return {'loss_history': loss_history}
