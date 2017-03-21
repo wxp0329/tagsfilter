@@ -4,8 +4,8 @@ import time, os
 import numpy as np
 import tensorflow as tf
 
-import NUS_input_enforce
-import NUS_net_enforce
+import Three_input_enforce
+import Three_net_enforce
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -25,19 +25,18 @@ def train():
 
         # Get images and labels for CIFAR-10.
         # images = NUS_input_enforce.InputUtil('/home/wangxiaopeng/NUS_dataset/images').next_batch(64)
-        img_size = NUS_input_enforce.FLAGS.img_size
-        images = tf.placeholder(dtype=tf.float32, shape=[NUS_net_enforce.FLAGS.batch_size, img_size, img_size, 3])
-        labels = tf.placeholder(dtype=tf.int64,shape=[NUS_net_enforce.FLAGS.batch_size,81])
+        img_size = Three_input_enforce.FLAGS.img_size
+        images = tf.placeholder(dtype=tf.float32, shape=[Three_net_enforce.FLAGS.batch_size, img_size, img_size, 3])
         # Build a Graph that computes the logits predictions from the
         # inference model.
-        logits = NUS_net_enforce.inference(images, NUS_net_enforce.FLAGS.batch_size)
+        logits = Three_net_enforce.inference(images, Three_net_enforce.FLAGS.batch_size)
 
         # Calculate loss.
-        loss = NUS_net_enforce.loss(logits,labels)
+        loss = Three_net_enforce.loss(logits)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        train_op = NUS_net_enforce.train(loss, global_step)
+        train_op = Three_net_enforce.train(loss, global_step)
 
         # Create a saver.
         saver = tf.train.Saver(tf.all_variables())
@@ -62,13 +61,13 @@ def train():
         #                                         graph_def=sess.get_default)
         summary_writer = tf.summary.FileWriter(FLAGS.train_dir, graph=g)
 
-        input = NUS_input_enforce.InputUtil(NUS_input_enforce.FLAGS.imgs_dir)
+        input = Three_input_enforce.InputUtil(Three_input_enforce.FLAGS.imgs_dir)
 
         for step in xrange(FLAGS.max_steps):
             start_time = time.time()
-            datas,labels_ = input.next_batch(NUS_net_enforce.FLAGS.batch_size)
+            datas = input.next_batch(Three_net_enforce.FLAGS.batch_size, step=step)
             _, loss_value = sess.run([train_op, loss],
-                                     feed_dict={images: datas,labels:labels_})
+                                     feed_dict={images: datas})
             duration = time.time() - start_time
 
             assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
@@ -84,7 +83,7 @@ def train():
                                     examples_per_sec, sec_per_batch))
 
             if step % 100 == 0:
-                summary_str = sess.run(summary_op,feed_dict={images: datas,labels:labels_})
+                summary_str = sess.run(summary_op,feed_dict={images: datas})
                 summary_writer.add_summary(summary_str, step)
 
             # Save the model checkpoint periodically.

@@ -7,10 +7,10 @@ import time
 import numpy as np
 import tensorflow as tf
 # import NUS_layers
-import NUS_net_enforce
+import cross_NUS_net_enforce
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/wangxiaopeng/NUS_train_sigmo2',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/wangxiaopeng/NUS_train_cross',
                            """Directory where to read model checkpoints.""")
 
 IMAGE_SIZE = 60
@@ -76,7 +76,7 @@ def inference(images, batch=2):
     #
     # conv1
     with tf.variable_scope('conv1') as scope:
-        kernel = _variable_with_weight_decay('weights', shape=[5, 5, 3, 64],
+        kernel = _variable_with_weight_decay('weights', shape=[3, 3, 3, 64],
                                              stddev=1e-4, wd=0.0)
         conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
         biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -92,7 +92,7 @@ def inference(images, batch=2):
 
     # conv2
     with tf.variable_scope('conv2') as scope:
-        kernel = _variable_with_weight_decay('weights', shape=[5, 5, 64, 64],
+        kernel = _variable_with_weight_decay('weights', shape=[3, 3, 64, 64],
                                              stddev=1e-4, wd=0.0)
         conv = tf.nn.conv2d(norm1, kernel, [1, 1, 1, 1], padding='SAME')
         biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.1))
@@ -127,12 +127,12 @@ def inference(images, batch=2):
         local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
 
     # # # # affine
-    with tf.variable_scope('affine') as scope:
-        weights = _variable_with_weight_decay('weights', [192, 100],
+    with tf.variable_scope('NUS_affine') as scope:
+        weights = _variable_with_weight_decay('weights', [192, 81],
                                               stddev=1 / 192.0, wd=0.0)
-        biases = _variable_on_cpu('biases', [100],
+        biases = _variable_on_cpu('biases', [81],
                                   tf.constant_initializer(0.0))
-        affine = tf.nn.relu(tf.matmul(local4, weights) + biases, name=scope.name)
+        affine = tf.nn.sigmoid(tf.matmul(local4, weights) + biases, name=scope.name)
 
     return affine
 # 获取该图片对应的输入向量
@@ -149,8 +149,8 @@ def getimg(str1):
 def evaluate():
     with tf.Graph().as_default() as g:
         num =2
-        arr = tf.placeholder("float", [None, IMAGE_SIZE, IMAGE_SIZE, 3])
-        logits = NUS_net_enforce.inference(arr,num)
+        arr = tf.placeholder("float", [num, IMAGE_SIZE, IMAGE_SIZE, 3])
+        logits = cross_NUS_net_enforce.inference(arr, num)
 
         saver = tf.train.Saver()
 
@@ -158,7 +158,7 @@ def evaluate():
             ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
             if ckpt and ckpt.model_checkpoint_path:
                 # Restores from checkpoint
-                saver.restore(sess, tf.train.latest_checkpoint(FLAGS.checkpoint_dir))
+                saver.restore(sess, ckpt.model_checkpoint_path)
 
             else:
                 print('No checkpoint file found')
@@ -166,13 +166,12 @@ def evaluate():
 
             print('hehiehiehie..............')
 
-            logit = sess.run(tf.reduce_sum(tf.square(logits[0]-logits[1])), feed_dict={#2542737901.jpg
+            logit = sess.run(logits[0]-logits[1], feed_dict={#100011951.jpg
                 arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/100011951.jpg'),
                       getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/100011951.jpg')]})
             # logit = sess.run(logits , feed_dict={  # 100011951.jpg
-            #     arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/2542737901.jpg') ]})
+            #     arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/100011951.jpg') ]})
             print(logit)
-            print(np.sum(logit))
             print(np.array(logit).shape)
 
 

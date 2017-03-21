@@ -46,11 +46,11 @@ def save_jaccard_set():
     print 'save  over!!!'
 
 
-print 'reading file sorted_intersect_replaced_220341_tags.dat...........'
-with open('/home/wangxiaopeng/operate/sorted_intersect_replaced_220341_tags.dat') as fr:
-    sorted_pairs = fr.readlines()
-
-print 'reading file sorted_intersect_replaced_220341_tags.dat over!!!!!!!!!!'
+# print 'reading file sorted_intersect_replaced_220341_tags.dat...........'
+# with open('/home/wangxiaopeng/operate/sorted_intersect_replaced_220341_tags.dat') as fr:
+#     sorted_pairs = fr.readlines()
+#
+# print 'reading file sorted_intersect_replaced_220341_tags.dat over!!!!!!!!!!'
 
 #分别把正例文件和负例文件写入对应文件夹
 def write_files(i, j):
@@ -87,14 +87,62 @@ def run_write_true_false_files():
     pool.wait()
     print 'all of processes excute over !!!!!'
 
+def find_index(all_tags,part_tags,left,right):
+
+    fw = open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/220341_name_index/220341_name_index_'+str(left)+'.txt','w')
+    for part in part_tags[left:right]:
+        num = 0
+        for all in all_tags:
+            if part.strip() == all.strip():
+                fw.write(part+' '+str(num)+'\n')
+                fw.flush()
+                break
+            num+=1
+    fw.close()
+    print 'write '+str(left),'over !!'
+
+
+def find_220341_all_index():
+    import re
+    all_tags = []
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/All_Tags.txt') as fr:
+        for i in fr.readlines():
+            all_tags.append(re.split('\s+', i, 1)[0])
+    part_tags = []
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_key_list.dat') as fr:
+        for i in fr.readlines():
+            part_tags.append(i.strip())
+    print 'part len:', len(part_tags)
+    print 'cpu_count :', cpu_count()
+    len_ = len(part_tags)
+    i_list = []
+    for i in xrange(0, len_, 1000):
+
+        if i + 1000 >= len_:
+            i_list.append([all_tags, part_tags, i, len_ + 1])
+            break
+        i_list.append([all_tags, part_tags, i, i + 1000])
+    n_list = [None for i in range(len(i_list))]
+    pool = threadpool.ThreadPool(cpu_count())
+    requests = threadpool.makeRequests(find_index, zip(i_list, n_list))
+    [pool.putRequest(req) for req in requests]
+    pool.wait()
+    print 'all of indexes excute over !!!!!'
+
+
+def com_part_indexes_220341():
+    i_list = []
+    for i in xrange(0, 220341, 1000):
+        i_list.append(i)
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_all_indexes.txt', 'a') as fw:
+        for i in i_list:
+            with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/220341_name_index/220341_name_index_' + str(
+                    i) + '.txt') as fr:
+                fw.writelines(fr.readlines())
+                fw.flush()
+    print 'com over !!!!!!!!!!!!!!!!!'
 
 if __name__ == '__main__':
     # run_write_true_false_files()
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_key_list.dat') as fr:
-        names = fr.readlines()
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/images_210841/1348680820.jpg') as fr1:
-        with open('/home/wangxiaopeng/find_pic/17558.jpg', 'w') as fw1:
-            fw1.writelines(fr1.readlines())
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/images_210841/34802460.jpg') as fr2:
-        with open('/home/wangxiaopeng/find_pic/6732.jpg', 'w') as fw2:
-            fw2.writelines(fr2.readlines())
+    find_220341_all_index()
+    com_part_indexes_220341()

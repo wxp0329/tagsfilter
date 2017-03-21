@@ -13,7 +13,7 @@ tf.app.flags.DEFINE_integer('img_size', 60,
 tf.app.flags.DEFINE_integer('step_skip', 1000,
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('imgs_dir',
-                           '/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341',
+                           '/home/wangxiaopeng/NUS_dataset/images_220341',
                            """Path to the NUS data directory.""")
 tf.app.flags.DEFINE_string('true_files_dir',
                            '/home/wangxiaopeng/NUS_dataset/true_files',
@@ -31,7 +31,7 @@ tf.app.flags.DEFINE_string('filenames_list_file',
 
 class InputUtil:
     def __init__(self, imgs_dir_name):
-        self.IMG_SIZE = 60
+        self.IMG_SIZE = 80
         self.imgs_dir_name = imgs_dir_name
         # 读取文件名列表
         with open(FLAGS.filenames_list_file) as fr:
@@ -42,22 +42,30 @@ class InputUtil:
         for root, dirs, files in os.walk(FLAGS.true_files_dir):
             for file in files:
                 # notice: read this file shoud strip '\n'
-                true_files.append(os.path.join(root, file))
+                with open(os.path.join(root, file)) as fr:
+                    true_files.append(fr.readlines())
         self.true_files = np.array(true_files)
+
+        print 'read true_files over !!!'
         # 获取负例文件列表
         false_files = []
         for root, dirs, files in os.walk(FLAGS.false_files_dir):
             for file in files:
                 # notice: read this file shoud strip '\n'
-                false_files.append(os.path.join(root, file))
+                with open(os.path.join(root, file)) as fr:
+                    false_files.append(fr.readlines())
         self.false_files = np.array(false_files)
+        print 'read false_files over !!!'
         # 获取交集为0文件列表
         mid_files = []
         for root, dirs, files in os.walk(FLAGS.mid_files_dir):
             for file in files:
                 # notice: read this file shoud strip '\n'
-                mid_files.append(os.path.join(root, file))
+                with open(os.path.join(root, file)) as fr:
+                    mid_files.append(fr.readlines())
         self.mid_files = np.array(mid_files)
+
+        print 'read mid_files over !!!'
 
     # 获取该图片对应的输入向量
     def getimg(self, str1):
@@ -69,18 +77,13 @@ class InputUtil:
         return np.divide(np.subtract(re_img, np.mean(re_img)), std)
 
     def read_true_sample(self, batch_size, step):
-        if step == 0:  # 正例就一个文件，只需要读取一次
-            np.random.shuffle(self.true_files)
-            # 获取打乱后的第一个文件
-            with open(self.true_files[0]) as fr:
-                self.true_names = np.array(fr.readlines())  # 格式：0 122 1
-
-        # np.random.shuffle(self.true_names)
-        self.part_true_names = np.random.choice(self.true_names, batch_size / 4)
+        #随机读取false_files中的一个文件（1000行数据），再随机返回batch_size / 8个pairs
+        part_true_names = np.random.choice(self.true_files[step%len(self.true_files)], batch_size / 4,
+                                           replace=False)
         # 获取打乱后的正例文件名
         true_pair_lefts = []  # 存放的每个pair的左部文件集
         true_pair_rights = []  # 存放的每个pair的右部文件集
-        for i in self.part_true_names:
+        for i in part_true_names:
             pair = i.strip().split(' ')
             true_pair_lefts.append(
                 self.getimg(os.path.join(self.imgs_dir_name, self.paths[int(pair[0])].strip() + '.jpg')))
@@ -90,39 +93,25 @@ class InputUtil:
         return [true_pair_lefts, true_pair_rights]
 
     def read_false_sample(self, batch_size, step):
-
-        if step == 0:
-            # 获取打乱后的第一个文件
-            with open(self.false_files[0]) as fr:
-                self.false_names = np.array(fr.readlines())
-
-            with open(self.mid_files[0]) as fr1:
-                self.mid_names = np.array(fr1.readlines())
-
-        # if step % FLAGS.step_skip == 0:
-        #     np.random.shuffle(self.false_names)
-        #     # self.part_false_names = self.false_names[:1000000]
-        #     np.random.shuffle(self.mid_names)
-            # self.part_mid_names = self.mid_names[:1000000]
-        # 获取打乱后的正例文件名
-
-        self.part_false_names =np.random.choice(self.false_names,batch_size / 8)
-        self.part_mid_names=np.random.choice(self.mid_names,batch_size / 8)
+        #随机读取false_files中的一个文件（1000行数据），再随机返回batch_size / 8个pairs
+        part_false_names = np.random.choice(self.false_files[step%len(self.false_files)],
+                                            batch_size / 8, replace=False)
+        part_mid_names = np.random.choice(self.mid_files[step%len(self.mid_files)], batch_size / 8,
+                                          replace=False)
         # 获取打乱后的正例文件名
         false_pair_lefts = []  # 存放的每个pair的左部文件集
         false_pair_rights = []  # 存放的每个pair的右部文件集
-        for i in self.part_false_names:
+        for i in part_false_names:
             pair = i.strip().split(' ')
             false_pair_lefts.append(
                 self.getimg(os.path.join(self.imgs_dir_name, self.paths[int(pair[0])].strip() + '.jpg')))
             false_pair_rights.append(
                 self.getimg(os.path.join(self.imgs_dir_name, self.paths[int(pair[1])].strip() + '.jpg')))
 
-
         # 获取打乱后的正例文件名
         mid_pair_lefts = []  # 存放的每个pair的左部文件集
         mid_pair_rights = []  # 存放的每个pair的右部文件集
-        for i in self.part_mid_names:
+        for i in part_mid_names:
             pair = i.strip().split(' ')  # 注意： 这个pairs就是实际的文件名！！！！！！！！！
             mid_pair_lefts.append(self.getimg(os.path.join(self.imgs_dir_name, pair[0].strip() + '.jpg')))
             mid_pair_rights.append(self.getimg(os.path.join(self.imgs_dir_name, pair[1].strip() + '.jpg')))

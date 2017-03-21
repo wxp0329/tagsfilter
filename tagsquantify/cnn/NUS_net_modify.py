@@ -14,13 +14,13 @@ tf.app.flags.DEFINE_boolean('use_fp16', False,
 
 # Global constants describing the NUS data set.
 LOSS_LAMBDA = 1.
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 220341 / FLAGS.batch_size
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.05  # Learning rate decay factor.
-MOMENTUM = 0.6
-INITIAL_LEARNING_RATE = 0.05  # Initial learning rate.
+LEARNING_RATE_DECAY_FACTOR = 0.01  # Learning rate decay factor.
+MOMENTUM = 0.9
+INITIAL_LEARNING_RATE = 0.01  # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -150,7 +150,7 @@ def inference(images, batch=FLAGS.batch_size):
         reshape = tf.reshape(pool2, [batch, dim])
 
         weights = _variable_with_weight_decay('weights', shape=[dim, 384],
-                                              stddev=0.04, wd=0.004)
+                                              stddev=0.05, wd=0.004)
         biases = _variable_on_cpu('biases', [384], tf.constant_initializer(0.1))
         local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
         _activation_summary(local3)
@@ -158,7 +158,7 @@ def inference(images, batch=FLAGS.batch_size):
     # local4
     with tf.variable_scope('local4') as scope:
         weights = _variable_with_weight_decay('weights', shape=[384, 192],
-                                              stddev=0.04, wd=0.004)
+                                              stddev=0.05, wd=0.004)
         biases = _variable_on_cpu('biases', [192], tf.constant_initializer(0.1))
         local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
         _activation_summary(local4)
@@ -254,7 +254,7 @@ def _add_loss_summaries(total_loss):
     for l in losses + [total_loss]:
         # Name each loss as '(raw)' and name the moving average version of the loss
         # as the original loss name.
-        tf.summary.histogram(l.op.name + ' (raw)', l)
+        tf.summary.scalar(l.op.name + ' (raw)', l)
         tf.summary.scalar(l.op.name, loss_averages.average(l))
 
     return loss_averages_op

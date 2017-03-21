@@ -14,7 +14,7 @@ tf.app.flags.DEFINE_string('imgs_dir',
                            '/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341',
                            """Path to the NUS data directory.""")
 tf.app.flags.DEFINE_string('name_index_file',
-                           '',
+                           '/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_in_all_indexes.txt',
                            """每行代表索引对应与220341_key_list.dat的pairs""")
 
 tf.app.flags.DEFINE_string('all_tags_file',
@@ -26,7 +26,7 @@ class InputUtil:
     def __init__(self, imgs_dir_name):
         self.imgs_dir_name = imgs_dir_name
         self.all_tags = np.loadtxt(FLAGS.all_tags_file,dtype=np.string_)
-        self.name_indexes = np.loadtxt(FLAGS.all_tags_file,dtype=np.string_)
+        self.name_indexes = np.loadtxt(FLAGS.name_index_file,dtype=np.string_)
 
 
     # 获取该图片对应的输入向量
@@ -40,7 +40,8 @@ class InputUtil:
     def next_batch(self, batch_size):
         np.random.shuffle(self.name_indexes)
         pics = []
-        name_labels = self.name_indexes[batch_size]
+        name_labels = np.array(self.name_indexes[:batch_size])
+
         for pic in name_labels[:,0]:
             pics.append(self.getimg(os.path.join(self.imgs_dir_name,pic+'.jpg')))
 
