@@ -73,34 +73,45 @@ def zhuDraw():
     # s1 = (20.99, 14.98)
     # my = (22.43, 26.20)
     #test
-    s = (43.71, 69.42)
-    s1 = (49.35,78.66)
+    s = (43.00, 73.42)
+    s1 = (45.46,75.20)
+    my = (47.48,79.54)
+    my1 = (50.17,85.31)
 
 
 
     fig, ax = plt.subplots()
 
+    # index = np.arange(n_groups)
     index = np.arange(n_groups)
-
-    bar_width = 0.21
+    bar_width = 0.2
 
     opacity = 0.4
 
-    rects2 = plt.bar(index , s, bar_width, alpha=opacity, color='g', label=u'浅层特征')
-    rects3 = plt.bar(index + bar_width , s1, bar_width, alpha=opacity, color='r', label=u'浅层特征+依存语义+CNN')
+    # rects2 = plt.bar(index , s, bar_width, alpha=opacity, color='g', label=u'文献[46]的方法')
+    # rects3 = plt.bar(index + bar_width , s1, bar_width, alpha=opacity, color='b', label=u'文献[47]的方法')
     # rects4 = plt.bar(index + bar_width + bar_width, my, bar_width, alpha=opacity, color='r',
-    #                  label=u'本文改进的方法')
+    #                  label=u'本文的方法')
+
+    rects2 = plt.bar(index, s, bar_width, alpha=opacity, color='g', label=u'VSM')
+    rects3 = plt.bar(index + bar_width, my, bar_width, alpha=opacity, color='b', label=u'VSM+CNN')
+    rects4 = plt.bar(index + bar_width + bar_width, s1, bar_width, alpha=opacity, color='g',
+                     label=u'VSM+依存关系')
+    rects5 = plt.bar(index + bar_width + bar_width+ bar_width, my1, bar_width, alpha=opacity, color='r',
+                     label=u'本文的检索模型')
     # plt.xlabel(u'方法' )
 
     plt.ylabel(u'比率' )
 
     # plt.title('filtered candidate set',fontproperties=chinese_font)
 
-    plt.xticks(index +0.1, (u'F1', u'准确率') )
+    plt.xticks(index +0.3, (u'F1', u'准确率') )
 
     plt.ylim(0,100)
 
-    plt.legend(loc='upper right')
+    # plt.legend(loc='upper right', bbox_to_anchor=(1.015,1.05))
+    plt.legend(loc='upper left')
+
 
     plt.tight_layout()
 
@@ -113,8 +124,8 @@ def zhuDraw():
     # add_labels(rects1)
     add_labels(rects2)
     add_labels(rects3)
-    # add_labels(rects4)
-
+    add_labels(rects4)
+    add_labels(rects5)
     plt.show()
 
 

@@ -9,7 +9,7 @@ import Three_net_enforce
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/NUS_train_test',
+tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/Three_train_dir',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 100000,
@@ -61,7 +61,7 @@ def train():
         #                                         graph_def=sess.get_default)
         summary_writer = tf.summary.FileWriter(FLAGS.train_dir, graph=g)
 
-        input = Three_input_enforce.InputUtil(Three_input_enforce.FLAGS.imgs_dir)
+        input = Three_input_enforce.InputUtil()
 
         for step in xrange(FLAGS.max_steps):
             start_time = time.time()
