@@ -10,13 +10,13 @@ from multiprocessing import cpu_count
 
 import threadpool
 
-import NUS_net_enforce
+from three_pics_pairs import  Three_net_enforce
 
 # from tagsquantify.cnn import NUS_layers
 
 IMAGE_SIZE = 60
 IMAGE_DIR = '/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341'
-CHECKPOINT_DIR = '/home/wangxiaopeng/NUS_train_sigmo2'
+CHECKPOINT_DIR = '/home/wangxiaopeng/Three_train_dir'
 SAVE_MAT_DIR = '/home/wangxiaopeng/NUS_dataset/enforce_mats'
 COM_DIR = '/home/wangxiaopeng/NUS_dataset/com_dir/'
 
@@ -49,7 +49,7 @@ def get_pic_input2output(file_paths, left, right):
             # 调用模型部分………………………………………………………………………………………………
             arr = tf.placeholder("float", [100, IMAGE_SIZE, IMAGE_SIZE, 3])
 
-            logits = NUS_net_enforce.inference(arr, 100)
+            logits = Three_net_enforce.inference(arr, 100)
             saver = tf.train.Saver()
 
             ckpt = tf.train.get_checkpoint_state(CHECKPOINT_DIR)

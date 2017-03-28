@@ -7,7 +7,7 @@ import numpy as np
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 258,
+tf.app.flags.DEFINE_integer('batch_size', 126,
                             """Number of images to process in a batch.""")
 
 tf.app.flags.DEFINE_boolean('use_fp16', False,
@@ -17,7 +17,7 @@ tf.app.flags.DEFINE_boolean('use_fp16', False,
 LOSS_LAMBDA = 1.
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 220000
 # Constants describing the training process.
-MOVING_AVERAGE_DECAY = 0.97  # The decay to use for the moving average.
+MOVING_AVERAGE_DECAY = 0.999  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 1e-4  # Learning rate decay factor.
 
@@ -193,7 +193,7 @@ def loss(imgs):
         i_k_dist = tf.sqrt(tf.reduce_sum(tf.square(tf.subtract(i_s, k_s)), axis=1))  # 一列
         i_j_dist = tf.sqrt(tf.reduce_sum(tf.square(tf.subtract(i_s, j_s)), axis=1))  # 一列
 
-        loss = tf.reduce_sum(tf.maximum(0, tf.add(tf.subtract(LOSS_LAMBDA, i_k_dist), i_j_dist)))
+        loss = tf.reduce_sum(tf.maximum(0., tf.add(tf.subtract(LOSS_LAMBDA, i_k_dist), i_j_dist)))
     tf.add_to_collection('losses', loss)
 
     # The total loss is defined as the cross entropy loss plus all of the weight

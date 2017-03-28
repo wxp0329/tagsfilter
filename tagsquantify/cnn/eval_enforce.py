@@ -7,10 +7,10 @@ import time
 import numpy as np
 import tensorflow as tf
 # import NUS_layers
-import NUS_net_enforce
+from three_pics_pairs import  Three_net_enforce
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/wangxiaopeng/NUS_train_sigmo2',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/wangxiaopeng/Three_train_dir',
                            """Directory where to read model checkpoints.""")
 
 IMAGE_SIZE = 60
@@ -31,7 +31,7 @@ def evaluate():
     with tf.Graph().as_default() as g:
         num =2
         arr = tf.placeholder("float", [None, IMAGE_SIZE, IMAGE_SIZE, 3])
-        logits = NUS_net_enforce.inference(arr,num)
+        logits = Three_net_enforce.inference(arr,num)
 
         saver = tf.train.Saver()
 
@@ -49,7 +49,7 @@ def evaluate():
 
             logit = sess.run(tf.reduce_sum(tf.square(logits[0]-logits[1])), feed_dict={#2542737901.jpg
                 arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/100011951.jpg'),
-                      getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/100011951.jpg')]})
+                      getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/2542737901.jpg')]})
             # logit = sess.run(logits , feed_dict={  # 100011951.jpg
             #     arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/2542737901.jpg') ]})
             print(logit)

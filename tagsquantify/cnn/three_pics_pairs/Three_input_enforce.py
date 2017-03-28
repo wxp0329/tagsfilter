@@ -10,10 +10,10 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('img_size', 60,
                             """Number of images to process in a batch.""")
 
-tf.app.flags.DEFINE_string('pair_dir', '/',
+tf.app.flags.DEFINE_string('pair_dir', '/home/wangxiaopeng/NUS_dataset/three_pair.txt',
                            """three pairs files dir.""")
 tf.app.flags.DEFINE_string('imgs_dir',
-                           '/home/wangxiaopeng/NUS_dataset/images_220341',
+                           '/home/wangxiaopeng/NUS_dataset/NUS_dataset/images_220341',
                            """Path to the NUS data directory.""")
 tf.app.flags.DEFINE_string('filenames_list_file',
                            '/home/wangxiaopeng/NUS_dataset/220341_key_list.dat',
@@ -26,7 +26,7 @@ class InputUtil:
         with open(FLAGS.filenames_list_file) as fr:
             self.paths = fr.readlines()
 
-        with open(FLAGS.pair_dir) as fr:  # 文件格式：i j k
+        with open(FLAGS.pair_dir) as fr:  # 文件格式：i j k 代表pic名字索引
             pair_files = fr.readlines()
 
         pair_indexes = []
@@ -56,8 +56,8 @@ class InputUtil:
         k_s = []
         for line in part_pair_names:
             line = line.strip().split(' ')
-            i_s.append(self.getimg(os.path.join(FLAGS.imgs_dir,self.paths[line[0]]+'.jpg')))
-            j_s.append(self.getimg(os.path.join(FLAGS.imgs_dir, self.paths[line[1]] + '.jpg')))
-            k_s.append(self.getimg(os.path.join(FLAGS.imgs_dir, self.paths[line[2]] + '.jpg')))
+            i_s.append(self.getimg(os.path.join(FLAGS.imgs_dir,self.paths[int(line[0])].strip()+'.jpg')))
+            j_s.append(self.getimg(os.path.join(FLAGS.imgs_dir, self.paths[int(line[1])].strip() + '.jpg')))
+            k_s.append(self.getimg(os.path.join(FLAGS.imgs_dir, self.paths[int(line[2])].strip() + '.jpg')))
         # 一维数组
-        return [np.concatenate([i_s,j_s,k_s])]
+        return np.concatenate([i_s,j_s,k_s])

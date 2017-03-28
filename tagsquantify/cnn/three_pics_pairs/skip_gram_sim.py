@@ -120,8 +120,8 @@ def check_pic(yuzhi_file):
     with open(yuzhi_file) as fr:
         for i in fr.readlines():
             line = i.strip().split(' ')
-            fileName1 = key_list[int(line[0])] + '.jpg'
-            fileName2 = key_list[int(line[1])] + '.jpg'
+            fileName1 = key_list[int(line[0])].strip() + '.jpg'
+            fileName2 = key_list[int(line[1])].strip()  + '.jpg'
             with open(os.path.join(imagePath, fileName1)) as fr:
                 with open(os.path.join(write_pic_dir, str(num) + '_' + fileName1), 'w') as fw:
                     fw.writelines(fr.readlines())
@@ -133,5 +133,5 @@ def check_pic(yuzhi_file):
 
 
 if __name__ == '__main__':
-    compute_sim()
-    # check_pic('')
+    # compute_sim()
+    check_pic('/home/wangxiaopeng/sim_0.03.txt')

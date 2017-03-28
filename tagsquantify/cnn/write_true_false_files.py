@@ -46,11 +46,11 @@ def save_jaccard_set():
     print 'save  over!!!'
 
 
-# print 'reading file sorted_intersect_replaced_220341_tags.dat...........'
-# with open('/home/wangxiaopeng/operate/sorted_intersect_replaced_220341_tags.dat') as fr:
-#     sorted_pairs = fr.readlines()
-#
-# print 'reading file sorted_intersect_replaced_220341_tags.dat over!!!!!!!!!!'
+print 'reading file sorted_intersect_replaced_220341_tags.dat...........'
+with open('/home/wangxiaopeng/operate/sorted_intersect_replaced_220341_tags.dat') as fr:
+    sorted_pairs = fr.readlines()
+
+print 'reading file sorted_intersect_replaced_220341_tags.dat over!!!!!!!!!!'
 
 #分别把正例文件和负例文件写入对应文件夹
 def write_files(i, j):

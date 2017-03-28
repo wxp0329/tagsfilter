@@ -6,11 +6,11 @@ import shutil
 import tensorflow as tf
 import os
 # import NUS_layers
-import NUS_net_enforce
+from three_pics_pairs import  Three_net_enforce
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/wangxiaopeng/NUS_train_sigmo2',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/wangxiaopeng/Three_train_dir',
                            """Directory where to read model checkpoints.""")
 IMG_SIZE = 60
 
@@ -29,7 +29,7 @@ def generatePoints(arr):
     # loss = NUS_net.loss(logits, tf.Variable([5,7],dtype=tf.int32))    1055282  1055277 1055406
 
     x = tf.placeholder('float', [1, IMG_SIZE, IMG_SIZE, 3])
-    logits = NUS_net_enforce.inference(x, 1)
+    logits = Three_net_enforce.inference(x, 1)
     saver = tf.train.Saver()
     with tf.Session() as sess:
 
