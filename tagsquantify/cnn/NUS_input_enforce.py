@@ -111,9 +111,9 @@ class InputUtil:
     def read_false_sample(self, batch_size, step):
         # 随机读取false_files中的一个文件（1000行数据），再随机返回batch_size / 8个pairs
         part_false_names = np.random.choice(self.false_files[step%self.false_files_len],
-                                            batch_size / 8, replace=False)
-        part_mid_names = np.random.choice(self.mid_files[step%self.mid_files_len], batch_size / 8,
-                                          replace=False)
+                                            batch_size /4, replace=False)
+        # part_mid_names = np.random.choice(self.mid_files[step%self.mid_files_len], batch_size / 16,
+        #                                   replace=False)
         # 获取打乱后的正例文件名
         false_pair_lefts = []  # 存放的每个pair的左部文件集
         false_pair_rights = []  # 存放的每个pair的右部文件集
@@ -125,14 +125,15 @@ class InputUtil:
                 self.getimg(os.path.join(self.imgs_dir_name, self.paths[int(pair[1])].strip() + '.jpg')))
 
         # 获取打乱后的正例文件名
-        mid_pair_lefts = []  # 存放的每个pair的左部文件集
-        mid_pair_rights = []  # 存放的每个pair的右部文件集
-        for i in part_mid_names:
-            pair = i.strip().split(' ')  # 注意： 这个pairs就是实际的文件名！！！！！！！！！
-            mid_pair_lefts.append(self.getimg(os.path.join(self.imgs_dir_name, pair[0].strip() + '.jpg')))
-            mid_pair_rights.append(self.getimg(os.path.join(self.imgs_dir_name, pair[1].strip() + '.jpg')))
-        return [np.concatenate([false_pair_lefts, mid_pair_lefts]),
-                np.concatenate([false_pair_rights, mid_pair_rights])]
+        # mid_pair_lefts = []  # 存放的每个pair的左部文件集
+        # mid_pair_rights = []  # 存放的每个pair的右部文件集
+        # for i in part_mid_names:
+        #     pair = i.strip().split(' ')  # 注意： 这个pairs就是实际的文件名！！！！！！！！！
+        #     mid_pair_lefts.append(self.getimg(os.path.join(self.imgs_dir_name, pair[0].strip() + '.jpg')))
+        #     mid_pair_rights.append(self.getimg(os.path.join(self.imgs_dir_name, pair[1].strip() + '.jpg')))
+        # return [np.concatenate([false_pair_lefts, mid_pair_lefts]),
+        #         np.concatenate([false_pair_rights, mid_pair_rights])]
+        return [false_pair_lefts,false_pair_rights]
 
     # 返回下一批数据
     def next_batch(self, batch_size, step):

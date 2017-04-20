@@ -9,10 +9,10 @@ import NUS_net_enforce
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/NUS_train_test',
+tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/NUS_train_sigmo2',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 100000,
+tf.app.flags.DEFINE_integer('max_steps', 150000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")

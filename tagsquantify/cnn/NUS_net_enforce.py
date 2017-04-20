@@ -16,7 +16,7 @@ tf.app.flags.DEFINE_boolean('use_fp16', False,
 LOSS_LAMBDA = 1.
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 220000
 # Constants describing the training process.
-MOVING_AVERAGE_DECAY = 0.97  # The decay to use for the moving average.
+MOVING_AVERAGE_DECAY = 0.99  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR =1e-4  # Learning rate decay factor.
 

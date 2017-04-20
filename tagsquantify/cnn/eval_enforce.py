@@ -48,8 +48,8 @@ def evaluate():
             print('hehiehiehie..............')
 
             logit = sess.run(tf.reduce_sum(tf.square(logits[0]-logits[1])), feed_dict={#2542737901.jpg
-                arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/100011951.jpg'),
-                      getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/2542737901.jpg')]})
+                arr: [getimg('/home/wangxiaopeng/NUS_dataset/images/100011951.jpg'),
+                      getimg('/home/wangxiaopeng/NUS_dataset/images/2542737901.jpg')]})
             # logit = sess.run(logits , feed_dict={  # 100011951.jpg
             #     arr: [getimg('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/2542737901.jpg') ]})
             print(logit)

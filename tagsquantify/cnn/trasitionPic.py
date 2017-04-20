@@ -10,14 +10,16 @@ from multiprocessing import cpu_count
 
 import threadpool
 
-from three_pics_pairs import  Three_net_enforce
+from three_pics_pairs import Three_net_enforce
 
 # from tagsquantify.cnn import NUS_layers
 
 IMAGE_SIZE = 60
-IMAGE_DIR = '/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341'
-CHECKPOINT_DIR = '/home/wangxiaopeng/Three_train_dir'
+IMAGE_DIR = '/media/wangxiaopeng/maxdisk/NUS_dataset/images_220841'
+IMAGE_DIR_500 = '/media/wangxiaopeng/maxdisk/NUS_dataset/images_220841'
+CHECKPOINT_DIR = '/home/wangxiaopeng/Three_train_sigmoid'
 SAVE_MAT_DIR = '/home/wangxiaopeng/NUS_dataset/enforce_mats'
+SAVE_MAT_DIR_500 = '/home/wangxiaopeng/NUS_dataset/enforce_mats_500'
 COM_DIR = '/home/wangxiaopeng/NUS_dataset/com_dir/'
 
 
@@ -36,20 +38,20 @@ def getimg(str1):
 # 把所有原始图片通过训练好的模型映射为固定长度的向量
 
 
-def get_pic_input2output(file_paths, left, right):
+def get_pic_input2output(file_paths, left, right, path=SAVE_MAT_DIR, img_dir=IMAGE_DIR, batch_size=100):
     with tf.Graph().as_default() as g:
         with tf.Session() as sess:
             # 读取生产的顺序文件（保证最后的向量顺序与该文件里的文件名顺序相同）
 
             all_pics = []
             for i in file_paths[left:right]:
-                name = os.path.join(IMAGE_DIR, str(i).strip())
+                name = os.path.join(img_dir, str(i).strip() + '.jpg')
                 all_pics.append(getimg(name))
 
             # 调用模型部分………………………………………………………………………………………………
-            arr = tf.placeholder("float", [100, IMAGE_SIZE, IMAGE_SIZE, 3])
+            arr = tf.placeholder("float", [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3])
 
-            logits = Three_net_enforce.inference(arr, 100)
+            logits = Three_net_enforce.inference(arr, batch_size)
             saver = tf.train.Saver()
 
             ckpt = tf.train.get_checkpoint_state(CHECKPOINT_DIR)
@@ -62,17 +64,28 @@ def get_pic_input2output(file_paths, left, right):
 
             affine = sess.run(logits, feed_dict={
                 arr: all_pics})
-
-            np.save(os.path.join(SAVE_MAT_DIR, str(left) + '_mat'), affine)
+            # 保存hash过后的结果
+            np.save(os.path.join(path, str(left) + '_mat'), affine)
             print 'save affine: ', left
+            return affine
 
+
+def trans_500():
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/2003_test_picName.txt') as fr:
+        file_paths = []
+        for i in fr.readlines():
+            file_paths.append(i.strip().split(' ')[0])
+    affine = get_pic_input2output(file_paths, 0, len(file_paths), path=SAVE_MAT_DIR_500, img_dir=IMAGE_DIR_500,
+                                  batch_size=len(file_paths))
+    np.save(os.path.join(SAVE_MAT_DIR_500, str(2003) + '_hash_mat_128'), np.where(affine>=0.5,1,0))
+    np.save(os.path.join(SAVE_MAT_DIR_500, str(2003) + '_mat_128'),affine)
 
 def trans_parts():
     if os.path.exists(SAVE_MAT_DIR):
         shutil.rmtree(SAVE_MAT_DIR)
 
     os.mkdir(SAVE_MAT_DIR)
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/220341_pics_names.txt') as fr:
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/218838_key_list.txt') as fr:
         file_paths = fr.readlines()
     print 'cpu_count :', cpu_count()
     len_ = len(file_paths)
@@ -112,7 +125,7 @@ def com_parts():
     file_id = []
     for i in xrange(0, 230000, 100):  # generate files indexes
 
-        if i + 100 >= 220241:
+        if i + 100 >= 218738:
             file_id.append(i)
             break
         file_id.append(i)
@@ -138,8 +151,10 @@ def com_two():
     a = np.load(os.path.join('/home/wangxiaopeng/NUS_dataset/com_dir/0_combine_pic.mat.npy'))
     b = np.load(os.path.join('/home/wangxiaopeng/NUS_dataset/com_dir/1000_combine_pic.mat.npy'))
     c = np.load(os.path.join('/home/wangxiaopeng/NUS_dataset/com_dir/2000_combine_pic.mat.npy'))
-    np.save(os.path.join('/home/wangxiaopeng/combine_pic.mat'),
+    np.save(os.path.join(os.path.join(SAVE_MAT_DIR_500, 'combine_pic_mat_128')),
             np.concatenate([a, b, c]))
+    np.save(os.path.join(os.path.join(SAVE_MAT_DIR_500, 'combine_hash_pic_mat_128')),
+            np.where(np.concatenate([a, b, c]) >= 0.5, 1, 0))
 
 
 if __name__ == '__main__':
@@ -147,6 +162,7 @@ if __name__ == '__main__':
     trans_parts()
     com_parts()
     com_two()
+    trans_500()
     # print np.shape(np.load(('/home/wangxiaopeng/combine_pic.mat.npy')))
     end = datetime.datetime.now()
     print 'consume time is :', (end - start).seconds / 60, 'minutes', (end - start).seconds % 60, ' seconds....'

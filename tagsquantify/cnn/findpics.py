@@ -115,7 +115,7 @@ def getsortedFilenames(path):
 
 # 通过用户输入一个图片，返回给图片对应的top_n个图片
 def get_one2more(user_pic_name, found_files_dir='/home/wangxiaopeng/found_pics/',
-                 all_pics_name_file='/media/wangxiaopeng/maxdisk/NUS_dataset/220341_pics_names.txt'
+                 all_pics_name_file='/home/wangxiaopeng/NUS_dataset/220341_key_list.dat'
                  ):
     with tf.Graph().as_default() as g:
         with open(all_pics_name_file) as fr:
@@ -133,9 +133,9 @@ def get_one2more(user_pic_name, found_files_dir='/home/wangxiaopeng/found_pics/'
         original = generatePoints([getimg(original)])
         num = 1
         for i in get_top_k_indexes(original, 10):
-            name = all_file_name[i].strip()
+            name = all_file_name[i].strip()+'.jpg'
             # print i, name
-            with open(os.path.join('/media/wangxiaopeng/maxdisk/NUS_dataset/images_220341/', name)) as fr:
+            with open(os.path.join('/home/wangxiaopeng/NUS_dataset/images_220341/', name)) as fr:
                 pic = fr.readlines()
                 with open(found_files_dir + str(num) + '_' + str(name), 'w') as fw:
                     fw.writelines(pic)
@@ -146,10 +146,10 @@ def main(argv=None):  # pylint: disable=unused-argument
 
     # get_pic_input2output()
     file_paths = []
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/500_img_names.txt') as fr:
+    with open('/home/wangxiaopeng/NUS_dataset/500_img_names.txt') as fr:
 
         for i in fr.readlines():
-            file_paths.append(os.path.join('/media/wangxiaopeng/maxdisk/NUS_dataset/images_500/', i.strip()))
+            file_paths.append(os.path.join('/home/wangxiaopeng/NUS_dataset/500_images/', i.strip()))
 
     if os.path.exists('/home/wangxiaopeng/found_pics/'):
         shutil.rmtree('/home/wangxiaopeng/found_pics/')
@@ -157,7 +157,7 @@ def main(argv=None):  # pylint: disable=unused-argument
     os.mkdir('/home/wangxiaopeng/found_pics/')
 
     num = 1
-    for i in file_paths[:100]:
+    for i in file_paths[400:]:
         get_one2more(i, '/home/wangxiaopeng/found_pics/' + str(num) + '_sample/')
         num += 1
         # com()

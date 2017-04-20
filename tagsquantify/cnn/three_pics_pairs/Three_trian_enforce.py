@@ -4,7 +4,8 @@ import time, os
 import numpy as np
 import tensorflow as tf
 
-import Three_input_enforce
+# import Three_input_enforce
+import Three_input_mem
 import Three_net_enforce
 
 FLAGS = tf.app.flags.FLAGS
@@ -12,7 +13,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/home/wangxiaopeng/Three_train_dir',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 100000,
+tf.app.flags.DEFINE_integer('max_steps', 200000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
@@ -25,7 +26,7 @@ def train():
 
         # Get images and labels for CIFAR-10.
         # images = NUS_input_enforce.InputUtil('/home/wangxiaopeng/NUS_dataset/images').next_batch(64)
-        img_size = Three_input_enforce.FLAGS.img_size
+        img_size = Three_input_mem.FLAGS.img_size
         images = tf.placeholder(dtype=tf.float32, shape=[Three_net_enforce.FLAGS.batch_size, img_size, img_size, 3])
         # Build a Graph that computes the logits predictions from the
         # inference model.
@@ -61,7 +62,7 @@ def train():
         #                                         graph_def=sess.get_default)
         summary_writer = tf.summary.FileWriter(FLAGS.train_dir, graph=g)
 
-        input = Three_input_enforce.InputUtil()
+        input = Three_input_mem.InputUtil()
 
         for step in xrange(FLAGS.max_steps):
             start_time = time.time()
