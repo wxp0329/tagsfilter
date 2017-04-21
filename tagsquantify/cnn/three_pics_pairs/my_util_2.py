@@ -20,6 +20,7 @@ def extractLabels():
                    np.loadtxt(i, dtype=np.int64)[all_index], fmt='%i')
         print 'save over ', i
 
+
 def extractLowFeature():
     with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/218838_in_all_only_indexes.txt') as fr:
         all_index = fr.readlines()
@@ -30,12 +31,15 @@ def extractLowFeature():
             file_paths.append(os.path.join(root, file))
     for i in file_paths:
         if i == '/media/wangxiaopeng/maxdisk/NUS_dataset/Low_Level_Features/BoW_int_500.dat':
-            np.savetxt('/media/wangxiaopeng/maxdisk/NUS_dataset/218838_Low_Level_Features/218838_' + i.rsplit('/', 1)[1],
-                       np.loadtxt(i, dtype=np.int64)[all_index], fmt='%i')
+            np.savetxt(
+                '/media/wangxiaopeng/maxdisk/NUS_dataset/218838_Low_Level_Features/218838_' + i.rsplit('/', 1)[1],
+                np.loadtxt(i, dtype=np.int64)[all_index], fmt='%i')
         else:
-            np.savetxt('/media/wangxiaopeng/maxdisk/NUS_dataset/218838_Low_Level_Features/218838_' + i.rsplit('/', 1)[1],
-                       np.loadtxt(i, dtype=np.float)[all_index], fmt='%f')
+            np.savetxt(
+                '/media/wangxiaopeng/maxdisk/NUS_dataset/218838_Low_Level_Features/218838_' + i.rsplit('/', 1)[1],
+                np.loadtxt(i, dtype=np.float)[all_index], fmt='%f')
         print 'save over ', i
+
 
 def count():
     file_paths = []
@@ -135,10 +139,10 @@ def getSection():
 
 def genThreePair():
     b = set()
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/218838_key_list.txt') as fr:
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/2003_key_list.txt') as fr:
         for i in fr.readlines():
             b.add(i.strip())
-    fw = open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/218838_com_three_pair.txt1', 'w')
+    fw = open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/218838_0.2_three_pair.txt', 'w')
 
     index_220341_name = dict()
     with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_key_list.dat') as fr:
@@ -147,12 +151,12 @@ def genThreePair():
             index_220341_name[count] = i.strip()
             count += 1
     a = dict()
-    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/218838_com_three_pair.txt') as fr:
+    with open('/media/wangxiaopeng/maxdisk/NUS_dataset/tags/tags_after/220341_0.2_three_pair.txt') as fr:
         for i in fr.readlines():
             cc = set()
             for ii in i.strip().split(' '):
                 cc.add(index_220341_name[int(ii)])
-            if len(cc.intersection(b)) == 3:
+            if len(cc.intersection(b)) == 0:
                 fw.write(i)
     fw.close()
 
@@ -172,15 +176,18 @@ def gen2003NameIndex():
         fw.write(i + ' ' + a[i] + '\n')
     fw.close()
 
+
 def which_feature():
     low_file_paths = []
     for root, dirs, files in os.walk('/media/wangxiaopeng/maxdisk/NUS_dataset/Low_Level_Features'):
         for file in files:
             low_file_paths.append(os.path.join(root, file))
     for i in low_file_paths:
-        print i.rsplit('/',1)[1]
+        print i.rsplit('/', 1)[1]
         with open(i) as fr:
             print len(fr.readline().strip().split(' '))
+
+
 def cnn_gen_sim_pics(retrived_pics):
     global all_2003_name_index
     with open(retrived_pics) as fr:
@@ -223,7 +230,7 @@ def cnn_gen_sim_pics(retrived_pics):
 
         in_mat_index = key_2003_index[pic_name]
         # to_all_dist = np.sqrt(np.sum(np.square(np.subtract(mat_2003[int(in_mat_index)], mat_218838)), axis=1))
-        to_all_dist = np.sum( (np.subtract(mat_2003[int(in_mat_index)], mat_218838)),axis=1)
+        to_all_dist = np.sum((np.subtract(mat_2003[int(in_mat_index)], mat_218838)), axis=1)
         order = 1
         #
         top_count_index = np.argsort(to_all_dist).tolist()[:100]
@@ -231,15 +238,16 @@ def cnn_gen_sim_pics(retrived_pics):
 
     end = datetime.datetime.now()
     consumeTime = (end - start).microseconds / 1000
-    fw.write(retrived_pics.rsplit('_', 1)[1].split('.')[0] + ': ' + str(consumeTime)+'\n')
+    fw.write(retrived_pics.rsplit('_', 1)[1].split('.')[0] + ': ' + str(consumeTime) + '\n')
     fw.flush()
     fw.close()
+
+
+def get_low_acc_map_recall():
+    content = ['sky', 'mountain', 'castle', 'valley', 'lake', 'sunset', 'ocean', 'clouds', 'rainbow', 'harbor']
+
+    fw = open('all_acc.txt','w')
+
 if __name__ == '__main__':
-    file_paths = []
-    for root, dirs, files in os.walk('/home/wangxiaopeng/lib_data/low_featrue_acc_map_recall'):
-        for file in dirs:
-            file_paths.append(file)
-    print file_paths
-
-
+    get_low_acc_map_recall()
 

@@ -250,9 +250,9 @@ def inference(images, batch=FLAGS.batch_size):
     drop = tf.nn.dropout(local4, keep_prob=0.5)
     # # # # affine
     with tf.variable_scope('affine') as scope:
-        weights = _variable_with_weight_decay('weights', [192, 128],
+        weights = _variable_with_weight_decay('weights', [192, 48],
                                               stddev=0.1, wd=0.0)
-        biases = _variable_on_cpu('biases', [128],
+        biases = _variable_on_cpu('biases', [48],
                                   tf.constant_initializer(0.))
         affine = tf.nn.sigmoid(tf.matmul(drop, weights) + biases, name=scope.name)
         _activation_summary(affine)

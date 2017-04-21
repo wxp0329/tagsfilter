@@ -77,8 +77,8 @@ def trans_500():
             file_paths.append(i.strip().split(' ')[0])
     affine = get_pic_input2output(file_paths, 0, len(file_paths), path=SAVE_MAT_DIR_500, img_dir=IMAGE_DIR_500,
                                   batch_size=len(file_paths))
-    np.save(os.path.join(SAVE_MAT_DIR_500, str(2003) + '_hash_mat_128'), np.where(affine>=0.5,1,0))
-    np.save(os.path.join(SAVE_MAT_DIR_500, str(2003) + '_mat_128'),affine)
+    np.save(os.path.join(SAVE_MAT_DIR_500, str(2003) + '_hash_mat_48a'), np.where(affine>=0.5,1,0))
+    np.save(os.path.join(SAVE_MAT_DIR_500, str(2003) + '_mat_48a'),affine)
 
 def trans_parts():
     if os.path.exists(SAVE_MAT_DIR):
@@ -151,9 +151,9 @@ def com_two():
     a = np.load(os.path.join('/home/wangxiaopeng/NUS_dataset/com_dir/0_combine_pic.mat.npy'))
     b = np.load(os.path.join('/home/wangxiaopeng/NUS_dataset/com_dir/1000_combine_pic.mat.npy'))
     c = np.load(os.path.join('/home/wangxiaopeng/NUS_dataset/com_dir/2000_combine_pic.mat.npy'))
-    np.save(os.path.join(os.path.join(SAVE_MAT_DIR_500, 'combine_pic_mat_128')),
+    np.save(os.path.join(os.path.join(SAVE_MAT_DIR_500, 'combine_pic_mat_48a')),
             np.concatenate([a, b, c]))
-    np.save(os.path.join(os.path.join(SAVE_MAT_DIR_500, 'combine_hash_pic_mat_128')),
+    np.save(os.path.join(os.path.join(SAVE_MAT_DIR_500, 'combine_hash_pic_mat_48a')),
             np.where(np.concatenate([a, b, c]) >= 0.5, 1, 0))
 
 

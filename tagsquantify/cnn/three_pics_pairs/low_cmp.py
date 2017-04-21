@@ -157,14 +157,14 @@ def cnn_gen_sim_pics(retrived_pics):
         for i in fr.readlines():
             index_218838_name[count] = i.strip()
             count += 1
-    mat_2003 = np.load('/home/wangxiaopeng/NUS_dataset/enforce_mats_500/2003_mat_128.npy')
-    mat_218838 = np.load('/home/wangxiaopeng/NUS_dataset/enforce_mats_500/combine_pic_mat_128.npy')
+    mat_2003 = np.load('/home/wangxiaopeng/NUS_dataset/enforce_mats_500/2003_mat_48a.npy')
+    mat_218838 = np.load('/home/wangxiaopeng/NUS_dataset/enforce_mats_500/combine_pic_mat_48a.npy')
     pics_root_dir = '/home/wangxiaopeng/all_find_pics/find_pic_cnn_' + retrived_pics.rsplit('_', 1)[1].split('.')[0]
     # if os.path.exists(pics_root_dir):
     #     shutil.rmtree(pics_root_dir)
     # os.mkdir(pics_root_dir)
 
-    fw = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_64_nohash/cnn_topic_time.txt', 'a')
+    fw = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/cnn_topic_time.txt', 'a')
     # 开始查询部分
     # 存储每个图片对应的top_count中的索引
     pic_top_count = []
@@ -494,10 +494,10 @@ def cnn_acc_map_recall():
     test_2003_avg = []
     test_2003_map = []
     test_2003_recall = []
-    fw = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_128/all_2003_avg_acc.txt', 'w')
-    fw_map = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_128/all_2003_avg_map.txt', 'w')
-    fw_recall = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_128/all_2003_avg_recall.txt', 'w')
-    root_dir = '/home/wangxiaopeng/lib_data/cnn_acc_map_recall_128'
+    fw = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/all_2003_avg_acc.txt', 'w')
+    fw_map = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/all_2003_avg_map.txt', 'w')
+    fw_recall = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/all_2003_avg_recall.txt', 'w')
+    root_dir = '/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a'
     for i in file_paths:
         cnn_gen_sim_pics(i)
         # 计算acc，recall，map
