@@ -109,9 +109,60 @@ def inference1(images, batch=FLAGS.batch_size):
     # by replacing all instances of tf.get_variable() with tf.Variable().
     #
     # conv1
+
+    # local3
+    with tf.variable_scope('local3') as scope:
+        # Move everything into depth so we can perform a single matrix multiply.
+        dim = 1
+        for d in images.get_shape()[1:].as_list():
+            dim *= d
+        reshape = tf.reshape(images, [batch, dim])
+
+        weights = _variable_with_weight_decay('weights', shape=[dim, 384],
+                                              stddev=0.0589, wd=0.004)
+        biases = _variable_on_cpu('biases', [384], tf.constant_initializer(0.))
+        local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+        _activation_summary(local3)
+
+    # local4
+    with tf.variable_scope('local4') as scope:
+        weights = _variable_with_weight_decay('weights', shape=[384, 192],
+                                              stddev=0.072, wd=0.004)
+        biases = _variable_on_cpu('biases', [192], tf.constant_initializer(0.))
+        local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
+        _activation_summary(local4)
+
+    drop = tf.nn.dropout(local4, keep_prob=0.5)
+    # # # # affine
+    with tf.variable_scope('affine') as scope:
+        weights = _variable_with_weight_decay('weights', [192, 48],
+                                              stddev=0.01, wd=0.0)
+        biases = _variable_on_cpu('biases', [48],
+                                  tf.constant_initializer(0.))
+        affine = tf.nn.relu(tf.matmul(drop, weights) + biases, name=scope.name)
+        _activation_summary(affine)
+
+    return affine
+
+
+def inference1(images, batch=FLAGS.batch_size):
+    """Build the NUS_dataset model.
+
+    Args:
+      images: Images returned from distorted_inputs() or inputs().
+
+    Returns:
+      Logits.
+    """
+    # We instantiate all variables using tf.get_variable() instead of
+    # tf.Variable() in order to share variables across multiple GPU training runs.
+    # If we only ran this model on a single GPU, we could simplify this function
+    # by replacing all instances of tf.get_variable() with tf.Variable().
+    #
+    # conv1
     with tf.variable_scope('conv1') as scope:
         kernel = _variable_with_weight_decay('weights', shape=[3, 3, 3, 64],
-                                             stddev=0.01, wd=0.0)
+                                             stddev=0.272, wd=0.0)
         conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding='SAME')
         biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
         bias = tf.nn.bias_add(conv, biases)
