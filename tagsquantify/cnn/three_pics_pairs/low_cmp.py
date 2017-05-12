@@ -164,7 +164,7 @@ def cnn_gen_sim_pics(retrived_pics):
     #     shutil.rmtree(pics_root_dir)
     # os.mkdir(pics_root_dir)
 
-    fw = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/cnn_topic_time.txt', 'a')
+    fw = open('/home/wangxiaopeng/lib_data_vgg/cnn_acc_map_recall_48a/cnn_topic_time.txt', 'a')
     # 开始查询部分
     # 存储每个图片对应的top_count中的索引
     pic_top_count = []
@@ -494,10 +494,10 @@ def cnn_acc_map_recall():
     test_2003_avg = []
     test_2003_map = []
     test_2003_recall = []
-    fw = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/all_2003_avg_acc.txt', 'w')
-    fw_map = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/all_2003_avg_map.txt', 'w')
-    fw_recall = open('/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a/all_2003_avg_recall.txt', 'w')
-    root_dir = '/home/wangxiaopeng/lib_data/cnn_acc_map_recall_48a'
+    fw = open('/home/wangxiaopeng/lib_data_vgg/cnn_acc_map_recall_48a/all_2003_avg_acc.txt', 'w')
+    fw_map = open('/home/wangxiaopeng/lib_data_vgg/cnn_acc_map_recall_48a/all_2003_avg_map.txt', 'w')
+    fw_recall = open('/home/wangxiaopeng/lib_data_vgg/cnn_acc_map_recall_48a/all_2003_avg_recall.txt', 'w')
+    root_dir = '/home/wangxiaopeng/lib_data_vgg/cnn_acc_map_recall_48a'
     for i in file_paths:
         cnn_gen_sim_pics(i)
         # 计算acc，recall，map
